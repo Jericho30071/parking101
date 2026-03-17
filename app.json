@@ -11,6 +11,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "dependencies": {
+      "expo": "~50.0.0",
+      "react": "18.2.0",
+      "react-native": "0.72.0",
+      "@react-navigation/native": "^6.1.6",
+      "@react-navigation/native-stack": "^6.3.16",
+      "expo-status-bar": "~1.6.0"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
