@@ -29,9 +29,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-router"
-    ],
-    "scheme": "parking101"
+    "sdkVersion": "52.0.0"
   }
 }
