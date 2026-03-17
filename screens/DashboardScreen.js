@@ -1,147 +1,137 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import React, { useState, useEffect } from 'react'
+import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import WebLikeLayout from './WebLikeLayout'
 
 const DashboardScreen = ({ navigation }) => {
   const [stats, setStats] = useState({
-    totalSlots: 12,
-    occupiedSlots: 8,
-    availableSlots: 4,
-    totalRevenue: 1250.50,
-    occupancyRate: 67
-  });
+    totalSlots: 2,
+    occupiedSlots: 1,
+    availableSlots: 1,
+    totalRevenue: 60.0,
+    occupancyRate: 50,
+  })
 
   useEffect(() => {
-    // Simulate fetching data from API
     setTimeout(() => {
-      setStats({
-        totalSlots: 15,
-        occupiedSlots: 10,
-        availableSlots: 5,
-        totalRevenue: 1875.75,
-        occupancyRate: 67
-      });
-    }, 2000);
-  }, []);
+      setStats((prev) => ({ ...prev }))
+    }, 500)
+  }, [])
 
-  const StatCard = ({ title, value, color, icon }) => (
-    <View style={[styles.statCard, { backgroundColor: color }]}>
-      <Text style={styles.statTitle}>{title}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statIcon}>{icon}</Text>
-    </View>
-  );
+  const cardData = [
+    { key: 'total', title: 'TOTAL SLOTS', value: stats.totalSlots, icon: '▣', border: '#60a5fa' },
+    { key: 'occ', title: 'OCCUPIED', value: stats.occupiedSlots, icon: '🚗', border: '#f87171' },
+    { key: 'avail', title: 'AVAILABLE', value: stats.availableSlots, icon: '◔', border: '#4ade80' },
+    { key: 'rate', title: 'OCCUPANCY RATE', value: `${stats.occupancyRate}%`, icon: '▥', border: '#f59e0b' },
+  ]
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <Text style={styles.title}>Parking Dashboard</Text>
-        
-        <View style={styles.statsGrid}>
-          <StatCard
-            title="Total Slots"
-            value={stats.totalSlots}
-            color="#3b82f6"
-            icon="🅿️"
-          />
-          <StatCard
-            title="Occupied"
-            value={stats.occupiedSlots}
-            color="#ef4444"
-            icon="🚗"
-          />
-          <StatCard
-            title="Available"
-            value={stats.availableSlots}
-            color="#10b981"
-            icon="✅"
-          />
-          <StatCard
-            title="Revenue"
-            value={`₱${stats.totalRevenue}`}
-            color="#f59e0b"
-            icon="💰"
-          />
+    <WebLikeLayout navigation={navigation} activeTab="Dashboard">
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.sectionCard}>
+          <View style={styles.cardsRow}>
+            {cardData.map((card) => (
+              <View key={card.key} style={[styles.summaryCard, { borderTopColor: card.border }]}>
+                <Text style={styles.summaryTitle}>{card.title}</Text>
+                <Text style={styles.summaryValue}>{card.value}</Text>
+                <Text style={styles.summaryIcon}>{card.icon}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
-        <View style={styles.quickActions}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Parking')}
-          >
-            <Text style={styles.actionText}>Manage Parking</Text>
-          </TouchableOpacity>
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Parking Slots Overview</Text>
+            <View style={styles.legendRow}>
+              <Text style={styles.legendItem}>🟩 Available</Text>
+              <Text style={styles.legendItem}>🟥 Occupied</Text>
+            </View>
+          </View>
+
+          <View style={[styles.slotRow, styles.slotOccupied]}>
+            <Text style={styles.slotNumber}>F1</Text>
+            <Text style={styles.slotMeta}>CAR</Text>
+            <Text style={styles.slotTime}>Since 10:05 PM</Text>
+          </View>
+          <View style={[styles.slotRow, styles.slotAvailable]}>
+            <Text style={styles.slotNumber}>F2</Text>
+            <Text style={styles.slotMeta}>Available</Text>
+          </View>
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <View style={styles.tableHeader}>
+            <Text style={styles.tableCell}>PLATE NUMBER</Text>
+            <Text style={styles.tableCell}>SLOT</Text>
+            <Text style={styles.tableCell}>STATUS</Text>
+          </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
-  );
-};
+    </WebLikeLayout>
+  )
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+  sectionCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#dbe2ea',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
   },
-  scrollView: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  statsGrid: {
+  cardsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 10,
+  },
+  summaryCard: {
+    width: '48%',
+    borderWidth: 1,
+    borderColor: '#e5eaf0',
+    borderTopWidth: 3,
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#f8fafc',
+  },
+  summaryTitle: { fontSize: 10, fontWeight: '700', color: '#64748b', letterSpacing: 0.3 },
+  summaryValue: { fontSize: 30, fontWeight: '700', color: '#0f172a', marginVertical: 6 },
+  summaryIcon: { fontSize: 18, color: '#334155' },
+  sectionHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  statCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 12,
-    minWidth: 160,
-    flex: 1,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    marginBottom: 10,
   },
-  statTitle: {
-    fontSize: 12,
-    color: '#6b7280',
+  sectionTitle: { fontSize: 19, fontWeight: '700', color: '#1f2937' },
+  legendRow: { flexDirection: 'row', gap: 10 },
+  legendItem: { fontSize: 11, color: '#64748b' },
+  slotRow: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: 'center',
     marginBottom: 8,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  statIcon: {
-    fontSize: 20,
-    marginTop: 4,
-  },
-  quickActions: {
-    paddingHorizontal: 16,
-    marginTop: 20,
-  },
-  actionButton: {
-    backgroundColor: '#3b82f6',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+  slotOccupied: { backgroundColor: '#fff5f5', borderColor: '#fecaca' },
+  slotAvailable: { backgroundColor: '#f0fdf4', borderColor: '#86efac' },
+  slotNumber: { fontSize: 24, fontWeight: '700', color: '#1f2937' },
+  slotMeta: { fontSize: 12, color: '#475569', marginTop: 2, textTransform: 'uppercase' },
+  slotTime: { fontSize: 11, color: '#64748b', marginTop: 2 },
+  tableHeader: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#e5eaf0',
     borderRadius: 8,
-    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    backgroundColor: '#f8fafc',
   },
-  actionText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+  tableCell: { fontSize: 10, fontWeight: '700', color: '#64748b' },
+})
 
-export default DashboardScreen;
+export default DashboardScreen

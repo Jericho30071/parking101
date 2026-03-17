@@ -11,8 +11,6 @@ import SummaryStatus from './components/SummaryStatus'
 import SlotDetailModal from './components/SlotDetailModal'
 import Settings from './components/Settings'
 import Notification from './components/Notification'
-import MobileNavigation from './components/MobileNavigation'
-import MobileParkingCard from './components/MobileParkingCard'
 import { 
   logout as apiLogout,
   fetchParkingSlots, 
@@ -30,9 +28,6 @@ import {
 } from './utils/api'
 import { formatCurrency } from './utils/api'
 import './App.css'
-import './components/MobileNavigation.css'
-import './components/MobileParkingCard.css'
-import './components/MobileParkingGrid.css'
 
 function App() {
   const defaultSettings = {
@@ -182,6 +177,9 @@ function App() {
 
     setUser(nextUser)
     setIsAuthenticated(true)
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({}, '', '/')
+    }
     localStorage.setItem('parkingAuth', JSON.stringify({
       user: nextUser,
       token: nextToken,
@@ -359,9 +357,6 @@ function App() {
           onLogout={handleLogout}
         />
         
-        {/* Mobile Navigation */}
-        {isMobile && <MobileNavigation />}
-        
         <main className="dashboard-main">
           <Routes>
             <Route path="/" element={
@@ -403,25 +398,10 @@ function App() {
                 </div>
 
                 {/* Parking Grid */}
-                {isMobile ? (
-                  <div className="mobile-parking-grid">
-                    {parkingSlots.map(slot => (
-                      <MobileParkingCard
-                        key={slot.id}
-                        slot={slot}
-                        onAssign={handleAssignVehicle}
-                        onRelease={handleReleaseVehicle}
-                        onEdit={handleUpdateSlot}
-                        onDelete={handleDeleteSlot}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <ParkingGrid 
-                    slots={parkingSlots}
-                    onSlotClick={handleSlotClick}
-                  />
-                )}
+                <ParkingGrid 
+                  parkingSlots={parkingSlots}
+                  onSlotClick={handleSlotClick}
+                />
                 
                 {/* Activity Log */}
                 <div className="activity-section">
@@ -437,6 +417,7 @@ function App() {
                 />
               </div>
             } />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
             
             <Route path="/management" element={
               <div className="dashboard-container">

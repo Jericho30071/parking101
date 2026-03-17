@@ -1,270 +1,122 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import React, { useState } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native'
+import WebLikeLayout from './WebLikeLayout'
 
 const ParkingScreen = ({ navigation }) => {
-  const [parkingSlots, setParkingSlots] = useState([
-    { id: 1, number: 'A1', isOccupied: true, vehiclePlate: 'ABC-123', vehicleType: 'car', entryTime: '2024-03-17T14:30:00Z' },
-    { id: 2, number: 'A2', isOccupied: false, vehiclePlate: null, vehicleType: null, entryTime: null },
-    { id: 3, number: 'B1', isOccupied: true, vehiclePlate: 'XYZ-456', vehicleType: 'suv', entryTime: '2024-03-17T13:15:00Z' },
-    { id: 4, number: 'B2', isOccupied: false, vehiclePlate: null, vehicleType: null, entryTime: null },
-    { id: 5, number: 'C1', isOccupied: false, vehiclePlate: null, vehicleType: null, entryTime: null },
-  ]);
+  const [parkingSlots] = useState([
+    { id: 1, number: 'F1', isOccupied: true, vehiclePlate: 'FAS1', vehicleType: 'car', entryTime: '10:05:45 PM' },
+    { id: 2, number: 'F2', isOccupied: false, vehiclePlate: null, vehicleType: null, entryTime: null },
+  ])
 
-  const ParkingSlotCard = ({ slot }) => (
-    <View style={[styles.slotCard, slot.isOccupied ? styles.occupiedCard : styles.availableCard]}>
-      <View style={styles.slotHeader}>
-        <Text style={styles.slotNumber}>{slot.number}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: slot.isOccupied ? '#ef4444' : '#10b981' }]}>
-          <Text style={styles.statusText}>{slot.isOccupied ? 'Occupied' : 'Available'}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.slotContent}>
-        {slot.isOccupied ? (
-          <View style={styles.vehicleInfo}>
-            <Text style={styles.vehiclePlate}>{slot.vehiclePlate}</Text>
-            <Text style={styles.vehicleType}>{slot.vehicleType}</Text>
-            <Text style={styles.entryTime}>
-              Since {new Date(slot.entryTime).toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true 
-              })}
-            </Text>
-          </View>
-        ) : (
-          <TouchableOpacity 
-            style={styles.assignButton}
-            onPress={() => {
-              Alert.alert(
-                'Assign Vehicle',
-                `Assign vehicle to slot ${slot.number}?`,
-                [
-                  { text: 'Assign', onPress: () => handleAssignVehicle(slot) },
-                  { text: 'Cancel', style: 'cancel' }
-                ]
-              );
-            }}
-          >
-            <Text style={styles.assignButtonText}>Assign Vehicle</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={styles.slotActions}>
-        {slot.isOccupied && (
-          <TouchableOpacity 
-            style={styles.releaseButton}
-            onPress={() => {
-              Alert.alert(
-                'Release Vehicle',
-                `Release vehicle from slot ${slot.number}?`,
-                [
-                  { text: 'Release', onPress: () => handleReleaseVehicle(slot) },
-                  { text: 'Cancel', style: 'cancel' }
-                ]
-              );
-            }}
-          >
-            <Text style={styles.buttonText}>Release</Text>
-          </TouchableOpacity>
-        )}
-        
-        <TouchableOpacity 
-          style={styles.editButton}
-          onPress={() => {
-            Alert.alert(
-              'Edit Slot',
-              `Edit slot ${slot.number}?`,
-              [
-                { text: 'Edit Number', onPress: () => handleEditSlot(slot) },
-                { text: 'Edit Vehicle', onPress: () => handleEditVehicle(slot), style: 'cancel' },
-                { text: 'Cancel', style: 'cancel' }
-              ]
-            );
-          }}
-        >
-          <Text style={styles.buttonText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const handleAssignVehicle = (slot) => {
-    // Simulate vehicle assignment
-    Alert.alert('Success', `Vehicle assigned to slot ${slot.number}`);
-  };
-
-  const handleReleaseVehicle = (slot) => {
-    // Simulate vehicle release
-    Alert.alert('Success', `Vehicle released from slot ${slot.number}`);
-  };
-
-  const handleEditSlot = (slot) => {
-    // Simulate slot editing
-    Alert.alert('Success', `Slot ${slot.number} updated`);
-  };
-
-  const handleEditVehicle = (slot) => {
-    // Simulate vehicle editing
-    Alert.alert('Success', `Vehicle details updated for slot ${slot.number}`);
-  };
+  const onAssign = (slot) => Alert.alert('Assign', `Assign vehicle to ${slot.number}`)
+  const onRelease = (slot) => Alert.alert('Release', `Release vehicle from ${slot.number}`)
+  const onEdit = (slot) => Alert.alert('Edit', `Edit ${slot.number}`)
+  const onDelete = (slot) => Alert.alert('Delete', `Delete ${slot.number}`)
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Parking Management</Text>
-      
-      <View style={styles.slotsGrid}>
-        {parkingSlots.map(slot => (
-          <ParkingSlotCard key={slot.id} slot={slot} />
-        ))}
-      </View>
+    <WebLikeLayout navigation={navigation} activeTab="Parking">
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.sectionCard}>
+          <View style={styles.headerRow}>
+            <Text style={styles.sectionTitle}>Parking Management</Text>
+            <View style={styles.actionRow}>
+              <TouchableOpacity style={styles.primaryBtn}>
+                <Text style={styles.primaryBtnText}>+ Add Slot</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryBtn}>
+                <Text style={styles.secondaryBtnText}>Assign Vehicle</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={() => {
-          Alert.alert(
-            'Add Slot',
-            'Add new parking slot?',
-            [
-              { text: 'Add', onPress: () => Alert.alert('Coming Soon', 'Add slot functionality will be available') },
-              { text: 'Cancel', style: 'cancel' }
-            ]
-          );
-        }}
-      >
-        <Text style={styles.addButtonText}>+ Add Slot</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
-};
+          <Text style={styles.subheading}>Parking Slots</Text>
+
+          {parkingSlots.map((slot) => (
+            <View
+              key={slot.id}
+              style={[styles.slotCard, slot.isOccupied ? styles.slotOccupied : styles.slotAvailable]}
+            >
+              <View style={styles.slotInfo}>
+                <Text style={styles.slotNumber}>{slot.number}</Text>
+                <Text style={[styles.slotStatus, slot.isOccupied ? styles.textRed : styles.textGreen]}>
+                  {slot.isOccupied ? 'Occupied' : 'Available'}
+                </Text>
+                {slot.vehiclePlate ? <Text style={styles.slotPlate}>{slot.vehiclePlate}</Text> : null}
+                {slot.entryTime ? <Text style={styles.slotTime}>Since {slot.entryTime}</Text> : null}
+              </View>
+
+              <View style={styles.slotActions}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, slot.isOccupied ? styles.releaseBtn : styles.assignBtn]}
+                  onPress={() => (slot.isOccupied ? onRelease(slot) : onAssign(slot))}
+                >
+                  <Text style={styles.actionBtnText}>{slot.isOccupied ? 'Release' : 'Assign'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={() => onEdit(slot)}>
+                  <Text style={styles.actionBtnText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => onDelete(slot)}>
+                  <Text style={styles.actionBtnText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </WebLikeLayout>
+  )
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+  sectionCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#dbe2ea',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 20,
-    textAlign: 'center',
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  sectionTitle: { fontSize: 19, fontWeight: '700', color: '#1f2937' },
+  subheading: { marginTop: 12, marginBottom: 10, fontSize: 15, fontWeight: '600', color: '#334155' },
+  actionRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 1 },
+  primaryBtn: { backgroundColor: '#667eea', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  primaryBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  secondaryBtn: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#dbe2ea',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  slotsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
+  secondaryBtnText: { color: '#334155', fontSize: 12, fontWeight: '600' },
   slotCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    width: '48%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  occupiedCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#ef4444',
-  },
-  availableCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#10b981',
-  },
-  slotHeader: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 10,
   },
-  slotNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  slotContent: {
-    minHeight: 80,
-  },
-  vehicleInfo: {
-    alignItems: 'center',
-  },
-  vehiclePlate: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  vehicleType: {
-    fontSize: 14,
-    color: '#6b7280',
-    textTransform: 'capitalize',
-  },
-  entryTime: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-  slotActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  assignButton: {
-    backgroundColor: '#10b981',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  releaseButton: {
-    backgroundColor: '#ef4444',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  editButton: {
-    backgroundColor: '#3b82f6',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  addButton: {
-    backgroundColor: '#3b82f6',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+  slotOccupied: { borderColor: '#fecaca', backgroundColor: '#fff5f5' },
+  slotAvailable: { borderColor: '#86efac', backgroundColor: '#f0fdf4' },
+  slotInfo: { gap: 2 },
+  slotNumber: { fontSize: 22, fontWeight: '700', color: '#1f2937' },
+  slotStatus: { fontSize: 12, fontWeight: '600' },
+  textRed: { color: '#ef4444' },
+  textGreen: { color: '#16a34a' },
+  slotPlate: { fontSize: 12, color: '#334155' },
+  slotTime: { fontSize: 11, color: '#64748b' },
+  slotActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '55%' },
+  actionBtn: { borderRadius: 7, paddingHorizontal: 10, paddingVertical: 7 },
+  actionBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  releaseBtn: { backgroundColor: '#ef4444' },
+  assignBtn: { backgroundColor: '#22c55e' },
+  editBtn: { backgroundColor: '#667eea' },
+  deleteBtn: { backgroundColor: '#94a3b8' },
+})
 
-export default ParkingScreen;
+export default ParkingScreen

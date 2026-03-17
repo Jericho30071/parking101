@@ -1,150 +1,63 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import React, { useState } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert } from 'react-native'
+import WebLikeLayout from './WebLikeLayout'
 
 const SettingsScreen = ({ navigation }) => {
-  const [settings, setSettings] = useState({
-    hourlyRate: 50.00,
-    notifications: true,
-    autoRefresh: false,
-    darkMode: false,
-  });
-
-  const SettingItem = ({ title, value, onToggle, type = 'switch' }) => (
-    <View style={styles.settingItem}>
-      <Text style={styles.settingTitle}>{title}</Text>
-      {type === 'switch' ? (
-        <Switch
-          value={value}
-          onValueChange={onToggle}
-          trackColor={{ false: '#767577', true: '#3b82f6' }}
-        />
-      ) : (
-        <TouchableOpacity 
-          style={styles.settingValue}
-          onPress={() => navigation.navigate('EditSetting', { setting: title })}
-        >
-          <Text style={styles.valueText}>{value}</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+  const [hourlyRate, setHourlyRate] = useState('20')
+  const [refreshInterval, setRefreshInterval] = useState('15')
+  const [sessionHours, setSessionHours] = useState('24')
+  const [notifications, setNotifications] = useState(true)
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
-      
-      <View style={styles.settingsSection}>
-        <Text style={styles.sectionTitle}>Parking Settings</Text>
-        
-        <SettingItem
-          title="Hourly Rate"
-          value={`₱${settings.hourlyRate}`}
-          onToggle={() => {}}
-          type="text"
-        />
-        
-        <SettingItem
-          title="Notifications"
-          value={settings.notifications ? 'Enabled' : 'Disabled'}
-          onToggle={(value) => setSettings(prev => ({ ...prev, notifications: value }))}
-        />
-        
-        <SettingItem
-          title="Auto Refresh"
-          value={settings.autoRefresh ? 'Enabled' : 'Disabled'}
-          onToggle={(value) => setSettings(prev => ({ ...prev, autoRefresh: value }))}
-        />
-      </View>
+    <WebLikeLayout navigation={navigation} activeTab="Settings">
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionHeader}>PRICING</Text>
+          <Text style={styles.fieldLabel}>Hourly Rate (PHP)</Text>
+          <TextInput style={styles.input} value={hourlyRate} onChangeText={setHourlyRate} keyboardType="numeric" />
+        </View>
 
-      <View style={styles.settingsSection}>
-        <Text style={styles.sectionTitle}>Display Settings</Text>
-        
-        <SettingItem
-          title="Dark Mode"
-          value={settings.darkMode ? 'On' : 'Off'}
-          onToggle={(value) => setSettings(prev => ({ ...prev, darkMode: value }))}
-        />
-      </View>
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionHeader}>LIVE UPDATES</Text>
+          <Text style={styles.fieldLabel}>Refresh Interval (seconds)</Text>
+          <TextInput style={styles.input} value={refreshInterval} onChangeText={setRefreshInterval} keyboardType="numeric" />
+        </View>
 
-      <TouchableOpacity 
-        style={styles.saveButton}
-        onPress={() => {
-          // Save settings logic
-          Alert.alert('Success', 'Settings saved successfully!');
-        }}
-      >
-        <Text style={styles.saveButtonText}>Save Settings</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
-};
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionHeader}>SECURITY</Text>
+          <Text style={styles.fieldLabel}>Session Duration (hours)</Text>
+          <TextInput style={styles.input} value={sessionHours} onChangeText={setSessionHours} keyboardType="numeric" />
+        </View>
+
+        <View style={styles.sectionCard}>
+          <View style={styles.switchRow}>
+            <Text style={styles.fieldLabel}>Enable Notifications</Text>
+            <Switch value={notifications} onValueChange={setNotifications} trackColor={{ false: '#cbd5e1', true: '#667eea' }} />
+          </View>
+        </View>
+
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.resetBtn}><Text style={styles.resetText}>Reset Defaults</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.saveBtn} onPress={() => Alert.alert('Saved', 'Settings saved successfully')}>
+            <Text style={styles.saveText}>Save Settings</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </WebLikeLayout>
+  )
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  settingsSection: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  settingTitle: {
-    fontSize: 16,
-    color: '#111827',
-    flex: 1,
-  },
-  settingValue: {
-    fontSize: 16,
-    color: '#3b82f6',
-    padding: 8,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 6,
-  },
-  valueText: {
-    textAlign: 'right',
-  },
-  saveButton: {
-    backgroundColor: '#3b82f6',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+  sectionCard:{backgroundColor:'#fff',borderWidth:1,borderColor:'#dbe2ea',borderRadius:12,padding:12,marginBottom:12},
+  sectionHeader:{fontSize:12,fontWeight:'800',color:'#64748b',marginBottom:8,letterSpacing:0.4},
+  fieldLabel:{fontSize:12,fontWeight:'600',color:'#334155',marginBottom:6},
+  input:{height:46,borderWidth:1,borderColor:'#dbe2ea',borderRadius:8,paddingHorizontal:12,backgroundColor:'#f8fafc',fontSize:14,color:'#0f172a'},
+  switchRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
+  actionRow:{flexDirection:'row',justifyContent:'flex-end',gap:8,marginBottom:12,flexWrap:'wrap'},
+  resetBtn:{backgroundColor:'#f1f5f9',borderWidth:1,borderColor:'#dbe2ea',borderRadius:8,paddingHorizontal:14,paddingVertical:10,minWidth:120,alignItems:'center'},
+  resetText:{fontSize:12,fontWeight:'700',color:'#475569'},
+  saveBtn:{backgroundColor:'#667eea',borderRadius:8,paddingHorizontal:14,paddingVertical:10,minWidth:120,alignItems:'center'},
+  saveText:{fontSize:12,fontWeight:'700',color:'#fff'},
+})
 
-export default SettingsScreen;
+export default SettingsScreen

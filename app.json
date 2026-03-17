@@ -4,21 +4,7 @@
     "slug": "parking101",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "dependencies": {
-      "expo": "~50.0.0",
-      "react": "18.2.0",
-      "react-native": "0.72.0",
-      "@react-navigation/native": "^6.1.6",
-      "@react-navigation/native-stack": "^6.3.16",
-      "expo-status-bar": "~1.6.0"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -28,15 +14,10 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
-      },
       "package": "com.jericho30071.parking101"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "sdkVersion": "52.0.0"
+    }
   }
 }

@@ -1490,14 +1490,30 @@
   color: #667eea;
 }
 
- .bottom-nav-content {
-   justify-content: space-around;
- }
+.bottom-nav-content {
+  justify-content: space-around;
+}
 
- .nav-item {
-   flex: 1;
-   max-width: 140px;
- }
+.nav-item {
+  flex: 1;
+  max-width: 140px;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav-content {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem;
+    padding: 0 0.5rem;
+  }
+
+  .nav-item {
+    max-width: none;
+    width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0.25rem;
+  }
+}
 
  .settings-page {
    background: white;
@@ -1693,10 +1709,6 @@
 }
 
 @media (max-width: 768px) {
-  .app {
-    padding-top: 60px; /* Space for mobile navigation */
-  }
-  
   .dashboard-main {
     margin-left: 0;
     padding: 16px;
@@ -1716,7 +1728,7 @@
   }
   
   .parking-grid {
-    display: none; /* Hide desktop grid on mobile */
+    display: flex;
   }
 }
 
