@@ -8,6 +8,7 @@ from .views import (
     MeView,
     ParkingSessionViewSet,
     ParkingSlotViewSet,
+    RegisterView,
     VehicleViewSet,
 )
 
@@ -18,6 +19,7 @@ router.register(r'sessions', ParkingSessionViewSet, basename='session')
 
 urlpatterns = [
     path('auth/login/', LoginView.as_view(), name='login'),
+    path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/me/', MeView.as_view(), name='me'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),

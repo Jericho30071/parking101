@@ -14,14 +14,15 @@ const SummaryStatus = ({ parkingSlots, activityLogs, totalRevenue, hourlyRate })
   
   const todayVehicles = todayActivity.length;
   const todayRevenue = todayActivity
-    .filter(log => log.status === 'completed' && log.fee)
-    .reduce((sum, log) => sum + log.fee, 0);
+    .filter(log => log.status === 'completed' && log.fee && !isNaN(log.fee))
+    .reduce((sum, log) => sum + parseFloat(log.fee), 0);
 
   const formatCurrency = (amount) => {
+    const safeAmount = isNaN(amount) || amount === null || amount === undefined ? 0 : parseFloat(amount);
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
       currency: 'PHP'
-    }).format(amount);
+    }).format(safeAmount);
   };
 
   const getOccupancyColor = (rate) => {

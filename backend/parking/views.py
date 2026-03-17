@@ -12,6 +12,7 @@ from .serializers import (
     LoginSerializer,
     ParkingSessionSerializer,
     ParkingSlotSerializer,
+    RegisterSerializer,
     UserSerializer,
     VehicleSerializer,
 )
@@ -31,6 +32,24 @@ class LoginView(APIView):
                 'token': token.key,
                 'user': UserSerializer(user).data,
             }
+        )
+
+
+class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response(
+            {
+                'token': token.key,
+                'user': UserSerializer(user).data,
+            },
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -54,6 +73,33 @@ class ParkingSlotViewSet(viewsets.ModelViewSet):
     serializer_class = ParkingSlotSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        try:
+            # Check if slot has any ACTIVE sessions
+            active_sessions = instance.sessions.filter(status='active')
+            if active_sessions.exists():
+                return Response(
+                    {'error': 'Cannot delete slot with currently parked vehicles. Please release all vehicles first.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # If there are completed sessions, we need to handle them
+            # Option 1: Delete completed sessions first, then delete slot
+            completed_sessions = instance.sessions.filter(status='completed')
+            if completed_sessions.exists():
+                # Archive or delete completed sessions before deleting slot
+                completed_sessions.delete()
+            
+            # Now delete the slot
+            return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            # Handle any database constraint errors
+            return Response(
+                {'error': f'Cannot delete slot: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 
 class VehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('plate_number')
@@ -62,9 +108,25 @@ class VehicleViewSet(viewsets.ModelViewSet):
 
 
 class ParkingSessionViewSet(viewsets.ModelViewSet):
-    queryset = ParkingSession.objects.select_related('slot', 'vehicle').all().order_by('-entry_time')
     serializer_class = ParkingSessionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = ParkingSession.objects.select_related('slot', 'vehicle').all()
+
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            qs = qs.filter(status=status_param)
+
+        slot_param = self.request.query_params.get('slot')
+        if slot_param:
+            qs = qs.filter(slot_id=slot_param)
+
+        vehicle_param = self.request.query_params.get('vehicle')
+        if vehicle_param:
+            qs = qs.filter(vehicle_id=vehicle_param)
+
+        return qs.order_by('-entry_time')
 
 
 class DashboardView(APIView):

@@ -1,113 +1,308 @@
-// Mock API functions to simulate backend calls
-import { mockParkingSlots, mockActivityLogs, parkingConfig } from '../data/mockParkingData.js';
+const API_BASE_URL = (import.meta?.env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/+$/, '')
 
-// Simulate API delay
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const getAuthToken = () => {
+  try {
+    const raw = localStorage.getItem('parkingAuth')
+    if (!raw) return ''
+    const parsed = JSON.parse(raw)
+    return typeof parsed.token === 'string' ? parsed.token : ''
+  } catch {
+    return ''
+  }
+}
 
-// Get parking slots data
-export const fetchParkingSlots = async () => {
-  await delay(500);
-  return [...mockParkingSlots];
-};
+const apiFetch = async (path, options = {}) => {
+  const token = getAuthToken()
+  const headers = {
+    ...(options.headers || {}),
+  }
 
-// Get activity logs
-export const fetchActivityLogs = async () => {
-  await delay(300);
-  return [...mockActivityLogs];
-};
+  if (!headers['Content-Type'] && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
+  }
+  if (token) {
+    headers['Authorization'] = `Token ${token}`
+  }
 
-// Get parking configuration
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  })
+
+  const contentType = res.headers.get('content-type') || ''
+  const isJson = contentType.includes('application/json')
+  const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => '')
+
+  if (!res.ok) {
+    const message =
+      (data && typeof data === 'object' && (data.detail || data.error)) ||
+      (typeof data === 'string' && data) ||
+      `Request failed (${res.status})`
+    throw new Error(message)
+  }
+
+  return data
+}
+
+export const login = async (username, password) => {
+  return apiFetch('/auth/login/', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+}
+
+export const register = async (username, email, password) => {
+  return apiFetch('/auth/register/', {
+    method: 'POST',
+    body: JSON.stringify({ username, email, password }),
+  })
+}
+
+export const logout = async () => {
+  return apiFetch('/auth/logout/', {
+    method: 'POST',
+  })
+}
+
+const getLocalConfig = () => {
+  try {
+    const raw = localStorage.getItem('parkingConfig')
+    if (!raw) {
+      return { hourlyRate: 50.0, currency: 'PHP', timeFormat: '12-hour' }
+    }
+    const parsed = JSON.parse(raw)
+    return {
+      hourlyRate: typeof parsed.hourlyRate === 'number' ? parsed.hourlyRate : 50.0,
+      currency: typeof parsed.currency === 'string' ? parsed.currency : 'PHP',
+      timeFormat: typeof parsed.timeFormat === 'string' ? parsed.timeFormat : '12-hour',
+    }
+  } catch {
+    return { hourlyRate: 50.0, currency: 'PHP', timeFormat: '12-hour' }
+  }
+}
+
+const setLocalConfig = (next) => {
+  const current = getLocalConfig()
+  const merged = { ...current, ...(next || {}) }
+  localStorage.setItem('parkingConfig', JSON.stringify(merged))
+  return merged
+}
+
 export const fetchParkingConfig = async () => {
-  await delay(200);
-  return { ...parkingConfig };
-};
+  return getLocalConfig()
+}
 
-// Add new parking slot
+export const updateParkingConfig = async (config) => {
+  return setLocalConfig(config)
+}
+
+const mapSlotsWithSessions = (slots, activeSessions, vehiclesById) => {
+  const bySlotId = new Map()
+  for (const s of activeSessions) {
+    bySlotId.set(s.slot, s)
+  }
+
+  return slots.map((slot) => {
+    const session = bySlotId.get(slot.id)
+    const vehicle = session ? vehiclesById.get(session.vehicle) : null
+    return {
+      id: slot.id,
+      number: slot.number,
+      isOccupied: Boolean(session),
+      vehicleType: vehicle?.vehicle_type ?? null,
+      vehiclePlate: vehicle?.plate_number ?? null,
+      entryTime: session?.entry_time ?? null,
+    }
+  })
+}
+
+export const fetchParkingSlots = async () => {
+  const [slots, sessions, vehicles] = await Promise.all([
+    apiFetch('/slots/'),
+    apiFetch('/sessions/?status=active'),
+    apiFetch('/vehicles/'),
+  ])
+
+  const vehiclesById = new Map((vehicles || []).map((v) => [v.id, v]))
+  return mapSlotsWithSessions(slots || [], sessions || [], vehiclesById)
+}
+
+export const fetchActivityLogs = async () => {
+  const [sessions, slots, vehicles] = await Promise.all([
+    apiFetch('/sessions/'),
+    apiFetch('/slots/'),
+    apiFetch('/vehicles/'),
+  ])
+
+  const slotsById = new Map((slots || []).map((s) => [s.id, s]))
+  const vehiclesById = new Map((vehicles || []).map((v) => [v.id, v]))
+
+  return (sessions || []).map((s) => {
+    const slot = slotsById.get(s.slot)
+    const vehicle = vehiclesById.get(s.vehicle)
+    return {
+      id: s.id,
+      plateNumber: vehicle?.plate_number ?? 'N/A',
+      slotNumber: slot?.number ?? 'N/A',
+      entryTime: s.entry_time,
+      exitTime: s.exit_time,
+      status: s.status,
+      fee: s.fee,
+    }
+  })
+}
+
+export const getTotalRevenue = async () => {
+  const sessions = await apiFetch('/sessions/')
+  return (sessions || [])
+    .filter((s) => s.status === 'completed' && s.fee && !isNaN(s.fee))
+    .reduce((sum, s) => sum + parseFloat(s.fee), 0)
+}
+
 export const addParkingSlot = async (slotNumber) => {
-  await delay(300);
-  const newSlot = {
-    id: Math.max(...mockParkingSlots.map(s => s.id)) + 1,
-    number: slotNumber.toUpperCase(),
+  const payload = { number: String(slotNumber || '').toUpperCase(), is_active: true }
+  const created = await apiFetch('/slots/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return {
+    id: created.id,
+    number: created.number,
     isOccupied: false,
     vehicleType: null,
     vehiclePlate: null,
-    entryTime: null
-  };
-  mockParkingSlots.push(newSlot);
-  return newSlot;
-};
+    entryTime: null,
+  }
+}
 
-// Assign vehicle to parking slot
+export const deleteParkingSlot = async (slotId) => {
+  await apiFetch(`/slots/${slotId}/`, {
+    method: 'DELETE',
+  })
+  return true
+}
+
+export const updateParkingSlot = async (slotId, slotNumber) => {
+  const payload = { number: String(slotNumber || '').toUpperCase() }
+  const updated = await apiFetch(`/slots/${slotId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+  return {
+    id: updated.id,
+    number: updated.number,
+    isOccupied: false,
+    vehicleType: null,
+    vehiclePlate: null,
+    entryTime: null,
+  }
+}
+
+export const updateVehicleAssignment = async (slotId, vehiclePlate, vehicleType) => {
+  // Find the active session for this slot
+  const activeSessions = await apiFetch('/sessions/?status=active')
+  const session = activeSessions.find(s => s.slot === slotId)
+  
+  if (!session) {
+    throw new Error('No active vehicle assignment found for this slot')
+  }
+
+  // Update vehicle details
+  const plate = String(vehiclePlate || '').toUpperCase()
+  const vehicles = await apiFetch('/vehicles/')
+  let vehicle = (vehicles || []).find((v) => v.id === session.vehicle) || null
+
+  if (!vehicle) {
+    throw new Error('Vehicle not found')
+  }
+
+  const updatedVehicle = await apiFetch(`/vehicles/${vehicle.id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ 
+      plate_number: plate, 
+      vehicle_type: vehicleType 
+    }),
+  })
+
+  return updatedVehicle
+}
+
+const findActiveSessionForSlot = async (slotId) => {
+  const active = await apiFetch('/sessions/?status=active')
+  return (active || []).find((s) => s.slot === slotId) || null
+}
+
 export const assignVehicleToSlot = async (slotId, vehiclePlate, vehicleType = 'car') => {
-  await delay(400);
-  const slot = mockParkingSlots.find(s => s.id === slotId);
-  if (slot && !slot.isOccupied) {
-    slot.isOccupied = true;
-    slot.vehiclePlate = vehiclePlate.toUpperCase();
-    slot.vehicleType = vehicleType;
-    slot.entryTime = new Date().toISOString();
-    
-    // Add to activity logs
-    const newLog = {
-      id: Math.max(...mockActivityLogs.map(l => l.id)) + 1,
-      plateNumber: vehiclePlate.toUpperCase(),
-      slotNumber: slot.number,
-      entryTime: slot.entryTime,
-      exitTime: null,
-      status: 'active',
-      fee: null
-    };
-    mockActivityLogs.unshift(newLog);
-    
-    return slot;
-  }
-  throw new Error('Slot not available');
-};
+  const activeSession = await findActiveSessionForSlot(slotId)
+  if (activeSession) throw new Error('Slot not available')
 
-// Release vehicle from parking slot
-export const releaseVehicleFromSlot = async (slotId) => {
-  await delay(400);
-  const slot = mockParkingSlots.find(s => s.id === slotId);
-  if (slot && slot.isOccupied) {
-    const exitTime = new Date().toISOString();
-    const entryTime = new Date(slot.entryTime);
-    const durationHours = (exitTime - entryTime) / (1000 * 60 * 60);
-    const fee = Math.ceil(durationHours * parkingConfig.hourlyRate * 100) / 100;
-    
-    // Update activity log
-    const log = mockActivityLogs.find(l => 
-      l.plateNumber === slot.vehiclePlate && 
-      l.slotNumber === slot.number && 
-      l.status === 'active'
-    );
-    
-    if (log) {
-      log.exitTime = exitTime;
-      log.status = 'completed';
-      log.fee = fee;
-    }
-    
-    // Clear slot
-    const vehicleInfo = {
-      vehiclePlate: slot.vehiclePlate,
-      entryTime: slot.entryTime,
-      exitTime: exitTime,
-      fee: fee,
-      duration: durationHours
-    };
-    
-    slot.isOccupied = false;
-    slot.vehicleType = null;
-    slot.vehiclePlate = null;
-    slot.entryTime = null;
-    
-    return vehicleInfo;
+  const plate = String(vehiclePlate || '').toUpperCase()
+  const vehicles = await apiFetch('/vehicles/')
+  let vehicle = (vehicles || []).find((v) => String(v.plate_number || '').toUpperCase() === plate) || null
+
+  if (!vehicle) {
+    vehicle = await apiFetch('/vehicles/', {
+      method: 'POST',
+      body: JSON.stringify({ plate_number: plate, vehicle_type: vehicleType }),
+    })
   }
-  throw new Error('No vehicle to release');
-};
+
+  await apiFetch('/sessions/', {
+    method: 'POST',
+    body: JSON.stringify({
+      slot: slotId,
+      vehicle: vehicle.id,
+      entry_time: new Date().toISOString(),
+      status: 'active',
+    }),
+  })
+
+  return true
+}
+
+export const releaseVehicleFromSlot = async (slotId, paymentAmount = null) => {
+  const session = await findActiveSessionForSlot(slotId)
+  if (!session) throw new Error('No vehicle to release')
+
+  const config = await fetchParkingConfig()
+  const exitTime = new Date().toISOString()
+  
+  // Use provided payment amount or calculate fee
+  let fee = paymentAmount
+  if (fee === null) {
+    fee = calculateParkingFee(session.entry_time, exitTime, config.hourlyRate)
+  }
+
+  await apiFetch(`/sessions/${session.id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      exit_time: exitTime,
+      status: 'completed',
+      fee: fee,
+    }),
+  })
+
+  const vehicles = await apiFetch('/vehicles/')
+  const vehicle = (vehicles || []).find((v) => v.id === session.vehicle)
+
+  const durationHours = (new Date(exitTime) - new Date(session.entry_time)) / (1000 * 60 * 60)
+  return {
+    vehiclePlate: vehicle?.plate_number ?? 'N/A',
+    entryTime: session.entry_time,
+    exitTime,
+    fee,
+    duration: durationHours,
+  }
+}
+
+export const simulateParkingUpdate = async () => {
+  return fetchParkingSlots()
+}
 
 // Calculate parking fee
-export const calculateParkingFee = (entryTime, exitTime, hourlyRate = parkingConfig.hourlyRate) => {
+export const calculateParkingFee = (entryTime, exitTime, hourlyRate = getLocalConfig().hourlyRate) => {
   if (!entryTime || !exitTime) return 0;
   
   const entry = new Date(entryTime);
@@ -119,53 +314,7 @@ export const calculateParkingFee = (entryTime, exitTime, hourlyRate = parkingCon
   return Math.round(billableHours * hourlyRate * 100) / 100;
 };
 
-// Get total revenue
-export const getTotalRevenue = async () => {
-  await delay(200);
-  return mockActivityLogs
-    .filter(log => log.status === 'completed' && log.fee)
-    .reduce((sum, log) => sum + log.fee, 0);
-};
 
-// Simulate real-time parking slot updates
-export const simulateParkingUpdate = async () => {
-  await delay(1000);
-  const randomSlotIndex = Math.floor(Math.random() * mockParkingSlots.length);
-  const slot = mockParkingSlots[randomSlotIndex];
-  
-  // Only update if probability is right (to avoid too frequent changes)
-  if (Math.random() > 0.7) {
-    if (slot.isOccupied) {
-      // Randomly release some vehicles
-      if (Math.random() > 0.5) {
-        try {
-          await releaseVehicleFromSlot(slot.id);
-        } catch {
-          // Ignore if no vehicle to release
-        }
-      }
-    } else {
-      // Randomly assign vehicles
-      if (Math.random() > 0.6) {
-        const randomPlate = `TEST-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-        try {
-          await assignVehicleToSlot(slot.id, randomPlate);
-        } catch {
-          // Ignore if slot not available
-        }
-      }
-    }
-  }
-  
-  return [...mockParkingSlots];
-};
-
-// Update parking configuration
-export const updateParkingConfig = async (config) => {
-  await delay(300);
-  Object.assign(parkingConfig, config);
-  return { ...parkingConfig };
-};
 
 // Format time for display
 export const formatTime = (dateString) => {

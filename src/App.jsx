@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react-router-dom'
 import Header from './components/Header'
 import SummaryCard from './components/SummaryCard'
@@ -10,13 +10,18 @@ import ParkingManagement from './components/ParkingManagement'
 import SummaryStatus from './components/SummaryStatus'
 import SlotDetailModal from './components/SlotDetailModal'
 import Settings from './components/Settings'
+import Notification from './components/Notification'
 import { 
+  logout as apiLogout,
   fetchParkingSlots, 
   fetchActivityLogs, 
   simulateParkingUpdate,
   getTotalRevenue,
   fetchParkingConfig,
   addParkingSlot,
+  deleteParkingSlot,
+  updateParkingSlot,
+  updateVehicleAssignment,
   assignVehicleToSlot,
   releaseVehicleFromSlot,
   updateParkingConfig
@@ -55,6 +60,12 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false)
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  })
 
   // Calculate statistics
   const totalSlots = parkingSlots.length
@@ -66,9 +77,9 @@ function App() {
   useEffect(() => {
     const authData = localStorage.getItem('parkingAuth')
     if (authData) {
-      const { user, timestamp } = JSON.parse(authData)
+      const { user, token, timestamp } = JSON.parse(authData)
       const sessionMs = (settings.sessionHours || 24) * 60 * 60 * 1000
-      if (Date.now() - timestamp < sessionMs) {
+      if (token && Date.now() - timestamp < sessionMs) {
         setUser(user)
         setIsAuthenticated(true)
       } else {
@@ -145,16 +156,25 @@ function App() {
     }
   }, [isAuthenticated, settings.refreshIntervalSec])
 
-  const handleLogin = (userData) => {
-    setUser(userData)
+  const handleLogin = (payload) => {
+    const nextUser = payload?.user || null
+    const nextToken = payload?.token || ''
+
+    setUser(nextUser)
     setIsAuthenticated(true)
     localStorage.setItem('parkingAuth', JSON.stringify({
-      user: userData,
+      user: nextUser,
+      token: nextToken,
       timestamp: Date.now()
     }))
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiLogout()
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
     setUser(null)
     setIsAuthenticated(false)
     localStorage.removeItem('parkingAuth')
@@ -170,6 +190,19 @@ function App() {
     setIsSlotModalOpen(true)
   }
 
+  const showNotification = (title, message, type = 'info') => {
+    setNotification({
+      isOpen: true,
+      title,
+      message,
+      type
+    })
+  }
+
+  const closeNotification = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }))
+  }
+
   const handleAddSlot = async (slotNumber) => {
     try {
       await addParkingSlot(slotNumber)
@@ -177,6 +210,50 @@ function App() {
       setParkingSlots(updatedSlots)
     } catch (error) {
       console.error('Error adding slot:', error)
+    }
+  }
+
+  const handleDeleteSlot = async (slotId) => {
+    try {
+      await deleteParkingSlot(slotId)
+      const updatedSlots = await fetchParkingSlots()
+      setParkingSlots(updatedSlots)
+      showNotification('Success', 'Parking slot deleted successfully', 'success')
+    } catch (error) {
+      console.error('Error deleting slot:', error)
+      // Handle specific error messages from backend
+      const errorMessage = error.message || 'Unknown error occurred'
+      if (errorMessage.includes('Cannot delete slot with currently parked vehicles')) {
+        showNotification('Cannot Delete', 'Cannot delete slot with currently parked vehicles. Please release all vehicles first.', 'warning')
+      } else if (errorMessage.includes('Cannot delete slot')) {
+        showNotification('Delete Error', errorMessage, 'error')
+      } else {
+        showNotification('Error', 'Error deleting slot: ' + errorMessage, 'error')
+      }
+    }
+  }
+
+  const handleUpdateSlot = async (slotId, slotNumber, vehiclePlate = null, vehicleType = null) => {
+    try {
+      if (vehiclePlate && vehicleType) {
+        // Update vehicle assignment
+        await updateVehicleAssignment(slotId, vehiclePlate, vehicleType);
+        showNotification('Success', 'Vehicle assignment updated successfully', 'success');
+      } else {
+        // Update slot number only
+        await updateParkingSlot(slotId, slotNumber);
+        showNotification('Success', 'Parking slot updated successfully', 'success');
+      }
+      
+      const [updatedSlots, updatedLogs] = await Promise.all([
+        fetchParkingSlots(),
+        fetchActivityLogs()
+      ])
+      setParkingSlots(updatedSlots)
+      setActivityLogs(updatedLogs)
+    } catch (error) {
+      console.error('Error updating slot:', error)
+      showNotification('Error', 'Error updating slot: ' + error.message, 'error')
     }
   }
 
@@ -191,17 +268,18 @@ function App() {
       setActivityLogs(updatedLogs)
     } catch (error) {
       console.error('Error assigning vehicle:', error)
-      alert('Error assigning vehicle: ' + error.message)
+      showNotification('Error', 'Error assigning vehicle: ' + error.message, 'error')
     }
   }
 
-  const handleReleaseVehicle = async (slotId) => {
+  const handleReleaseVehicle = async (slotId, paymentAmount = null) => {
     try {
-      const vehicleInfo = await releaseVehicleFromSlot(slotId)
+      const vehicleInfo = await releaseVehicleFromSlot(slotId, paymentAmount)
       
-      // Show fee information
+      // Show fee information with modern notification
       if (vehicleInfo.fee > 0) {
-        alert(`Vehicle released!\n\nPlate: ${vehicleInfo.vehiclePlate}\nDuration: ${Math.ceil(vehicleInfo.duration)} hours\nFee: ${formatCurrency(vehicleInfo.fee)}`)
+        const message = `Plate: ${vehicleInfo.vehiclePlate}\nDuration: ${Math.ceil(vehicleInfo.duration)} hours\nFee: ${formatCurrency(vehicleInfo.fee)}`
+        showNotification('Vehicle released!', message, 'success')
       }
       
       const [updatedSlots, updatedLogs, updatedRevenue] = await Promise.all([
@@ -214,7 +292,7 @@ function App() {
       setTotalRevenue(updatedRevenue)
     } catch (error) {
       console.error('Error releasing vehicle:', error)
-      alert('Error releasing vehicle: ' + error.message)
+      showNotification('Error', 'Error releasing vehicle: ' + error.message, 'error')
     }
   }
 
@@ -332,6 +410,9 @@ function App() {
                   onAddSlot={handleAddSlot}
                   onAssignVehicle={handleAssignVehicle}
                   onReleaseVehicle={handleReleaseVehicle}
+                  onDeleteSlot={handleDeleteSlot}
+                  onUpdateSlot={handleUpdateSlot}
+                  showNotification={showNotification}
                 />
               </div>
             } />
@@ -392,6 +473,15 @@ function App() {
             </NavLink>
           </div>
         </nav>
+
+        {/* Notification Component */}
+        <Notification
+          isOpen={notification.isOpen}
+          onClose={closeNotification}
+          title={notification.title}
+          message={notification.message}
+          type={notification.type}
+        />
       </div>
     </Router>
   )

@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 
+import { login as apiLogin, register as apiRegister } from '../utils/api';
+
+function validateEmail(email) {
+  const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return pattern.test(String(email || '').trim());
+}
+
 const Login = ({ onLogin }) => {
+  const [mode, setMode] = useState('login');
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: ''
   });
@@ -11,14 +20,26 @@ const Login = ({ onLogin }) => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    }
+
+    if (mode === 'signup') {
+      if (!formData.email.trim()) {
+        newErrors.email = 'Email is required';
+      } else if (!validateEmail(formData.email)) {
+        newErrors.email = 'Email is invalid';
+      }
     }
     
     if (!formData.password.trim()) {
       newErrors.password = 'Password is required';
+    } else if (mode === 'signup') {
+      if (formData.password.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters';
+      } else if (!/[A-Za-z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
+        newErrors.password = 'Password must contain at least 1 letter and 1 number';
+      }
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
@@ -33,17 +54,24 @@ const Login = ({ onLogin }) => {
     if (Object.keys(newErrors).length === 0) {
       setIsLoading(true);
       setErrors({});
-      
-      // Mock authentication delay
-      setTimeout(() => {
-        // Mock credentials: admin@parking.com / admin123
-        if (formData.email === 'admin@parking.com' && formData.password === 'admin123') {
-          onLogin({ email: formData.email, name: 'Admin User' });
-        } else {
-          setErrors({ login: 'Invalid email or password' });
-        }
+
+      try {
+        const res =
+          mode === 'signup'
+            ? await apiRegister(formData.username, formData.email, formData.password)
+            : await apiLogin(formData.username, formData.password)
+        onLogin({
+          user: {
+            ...res.user,
+            name: res.user?.username || 'Admin User',
+          },
+          token: res.token,
+        })
+      } catch (error) {
+        setErrors({ login: error?.message || 'Login failed' })
+      } finally {
         setIsLoading(false);
-      }, 1000);
+      }
     } else {
       setErrors(newErrors);
     }
@@ -85,19 +113,36 @@ const Login = ({ onLogin }) => {
           )}
           
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="username">Username</label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
               onChange={handleChange}
-              className={errors.email ? 'error' : ''}
-              placeholder="Enter your email"
+              className={errors.username ? 'error' : ''}
+              placeholder="Enter your username"
               disabled={isLoading}
             />
-            {errors.email && <span className="field-error">{errors.email}</span>}
+            {errors.username && <span className="field-error">{errors.username}</span>}
           </div>
+
+          {mode === 'signup' && (
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={errors.email ? 'error' : ''}
+                placeholder="Enter your email"
+                disabled={isLoading}
+              />
+              {errors.email && <span className="field-error">{errors.email}</span>}
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="password">Password</label>
@@ -121,15 +166,43 @@ const Login = ({ onLogin }) => {
                 Signing in...
               </>
             ) : (
-              'Sign In'
+              mode === 'signup' ? 'Create Account' : 'Sign In'
             )}
           </button>
         </form>
 
         <div className="login-footer">
-          <p>Demo Credentials:</p>
-          <p><strong>Email:</strong> admin@parking.com</p>
-          <p><strong>Password:</strong> admin123</p>
+          {mode === 'login' ? (
+            <p>
+              Don&apos;t have an account?{' '}
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => {
+                  setMode('signup');
+                  setErrors({});
+                }}
+                disabled={isLoading}
+              >
+                Sign up
+              </button>
+            </p>
+          ) : (
+            <p>
+              Already have an account?{' '}
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => {
+                  setMode('login');
+                  setErrors({});
+                }}
+                disabled={isLoading}
+              >
+                Sign in
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>
