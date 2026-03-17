@@ -1,0 +1,182 @@
+.mobile-parking-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.mobile-parking-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.mobile-slot-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.mobile-status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.mobile-parking-card.occupied .mobile-status-badge {
+  background: #ef4444;
+  color: white;
+}
+
+.mobile-parking-card.available .mobile-status-badge {
+  background: #10b981;
+  color: white;
+}
+
+.mobile-card-content {
+  padding: 20px;
+}
+
+.mobile-vehicle-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.vehicle-icon {
+  font-size: 48px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 12px;
+}
+
+.vehicle-details {
+  flex: 1;
+}
+
+.vehicle-plate {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.vehicle-type {
+  font-size: 14px;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+.entry-time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.available-slot-info {
+  text-align: center;
+  padding: 20px;
+}
+
+.available-icon {
+  margin-bottom: 12px;
+  color: #10b981;
+}
+
+.available-text {
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.mobile-card-actions {
+  padding: 16px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 8px;
+}
+
+.mobile-action-buttons {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.mobile-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mobile-btn-release {
+  background: #ef4444;
+  color: white;
+}
+
+.mobile-btn-release:hover {
+  background: #dc2626;
+}
+
+.mobile-btn-edit {
+  background: #3b82f6;
+  color: white;
+}
+
+.mobile-btn-edit:hover {
+  background: #2563eb;
+}
+
+.mobile-btn-assign {
+  background: #10b981;
+  color: white;
+  flex: 1;
+}
+
+.mobile-btn-assign:hover {
+  background: #059669;
+}
+
+.mobile-btn-delete {
+  background: #6b7280;
+  color: white;
+}
+
+.mobile-btn-delete:hover {
+  background: #4b5563;
+}
+
+/* Mobile responsive */
+@media (min-width: 769px) {
+  .mobile-parking-card {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-parking-card {
+    display: block;
+  }
+}

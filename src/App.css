@@ -1692,6 +1692,34 @@
   }
 }
 
+@media (max-width: 768px) {
+  .app {
+    padding-top: 60px; /* Space for mobile navigation */
+  }
+  
+  .dashboard-main {
+    margin-left: 0;
+    padding: 16px;
+  }
+  
+  .sidebar {
+    display: none; /* Hide desktop sidebar on mobile */
+  }
+  
+  .dashboard-container {
+    padding: 16px;
+  }
+  
+  .summary-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .parking-grid {
+    display: none; /* Hide desktop grid on mobile */
+  }
+}
+
 @media (max-width: 480px) {
   .dashboard-main {
     padding: 0.75rem;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react-router-dom'
+import { BrowserRouter as Router, Route, Routes, Navigate, NavLink } from 'react-router-dom'
 import Header from './components/Header'
 import SummaryCard from './components/SummaryCard'
 import ParkingGrid from './components/ParkingGrid'
@@ -11,6 +11,8 @@ import SummaryStatus from './components/SummaryStatus'
 import SlotDetailModal from './components/SlotDetailModal'
 import Settings from './components/Settings'
 import Notification from './components/Notification'
+import MobileNavigation from './components/MobileNavigation'
+import MobileParkingCard from './components/MobileParkingCard'
 import { 
   logout as apiLogout,
   fetchParkingSlots, 
@@ -28,6 +30,9 @@ import {
 } from './utils/api'
 import { formatCurrency } from './utils/api'
 import './App.css'
+import './components/MobileNavigation.css'
+import './components/MobileParkingCard.css'
+import './components/MobileParkingGrid.css'
 
 function App() {
   const defaultSettings = {
@@ -43,6 +48,10 @@ function App() {
       const parsed = JSON.parse(raw)
       return {
         hourlyRate: typeof parsed.hourlyRate === 'number' ? parsed.hourlyRate : defaultSettings.hourlyRate,
+        currency: typeof parsed.currency === 'string' ? parsed.currency : defaultSettings.currency,
+        theme: typeof parsed.theme === 'string' ? parsed.theme : defaultSettings.theme,
+        notifications: typeof parsed.notifications === 'boolean' ? parsed.notifications : defaultSettings.notifications,
+        autoRefresh: typeof parsed.autoRefresh === 'boolean' ? parsed.autoRefresh : defaultSettings.autoRefresh,
         refreshIntervalSec: typeof parsed.refreshIntervalSec === 'number' ? parsed.refreshIntervalSec : defaultSettings.refreshIntervalSec,
         sessionHours: typeof parsed.sessionHours === 'number' ? parsed.sessionHours : defaultSettings.sessionHours
       }
@@ -60,12 +69,23 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   const [notification, setNotification] = useState({
     isOpen: false,
     title: '',
     message: '',
     type: 'info'
   })
+
+  // Handle mobile responsiveness
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Calculate statistics
   const totalSlots = parkingSlots.length
@@ -339,6 +359,9 @@ function App() {
           onLogout={handleLogout}
         />
         
+        {/* Mobile Navigation */}
+        {isMobile && <MobileNavigation />}
+        
         <main className="dashboard-main">
           <Routes>
             <Route path="/" element={
@@ -380,13 +403,26 @@ function App() {
                 </div>
 
                 {/* Parking Grid */}
-                <div className="parking-section">
+                {isMobile ? (
+                  <div className="mobile-parking-grid">
+                    {parkingSlots.map(slot => (
+                      <MobileParkingCard
+                        key={slot.id}
+                        slot={slot}
+                        onAssign={handleAssignVehicle}
+                        onRelease={handleReleaseVehicle}
+                        onEdit={handleUpdateSlot}
+                        onDelete={handleDeleteSlot}
+                      />
+                    ))}
+                  </div>
+                ) : (
                   <ParkingGrid 
-                    parkingSlots={parkingSlots}
+                    slots={parkingSlots}
                     onSlotClick={handleSlotClick}
                   />
-                </div>
-
+                )}
+                
                 {/* Activity Log */}
                 <div className="activity-section">
                   <ActivityLogTable activityLogs={activityLogs} />
