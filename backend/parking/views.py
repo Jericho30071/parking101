@@ -69,9 +69,14 @@ class MeView(APIView):
 
 
 class ParkingSlotViewSet(viewsets.ModelViewSet):
-    queryset = ParkingSlot.objects.all().order_by('number')
     serializer_class = ParkingSlotSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ParkingSlot.objects.filter(owner=self.request.user).order_by('number')
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -102,9 +107,14 @@ class ParkingSlotViewSet(viewsets.ModelViewSet):
 
 
 class VehicleViewSet(viewsets.ModelViewSet):
-    queryset = Vehicle.objects.all().order_by('plate_number')
     serializer_class = VehicleSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Vehicle.objects.filter(owner=self.request.user).order_by('plate_number')
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class ParkingSessionViewSet(viewsets.ModelViewSet):
@@ -112,7 +122,7 @@ class ParkingSessionViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = ParkingSession.objects.select_related('slot', 'vehicle').all()
+        qs = ParkingSession.objects.select_related('slot', 'vehicle').filter(owner=self.request.user)
 
         status_param = self.request.query_params.get('status')
         if status_param:
@@ -128,6 +138,9 @@ class ParkingSessionViewSet(viewsets.ModelViewSet):
 
         return qs.order_by('-entry_time')
 
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
 
 class DashboardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -137,11 +150,12 @@ class DashboardView(APIView):
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         last_24h = now - timedelta(hours=24)
 
-        slots_total = ParkingSlot.objects.count()
-        slots_active = ParkingSlot.objects.filter(is_active=True).count()
+        slots_total = ParkingSlot.objects.filter(owner=request.user).count()
+        slots_active = ParkingSlot.objects.filter(owner=request.user, is_active=True).count()
 
-        sessions_active = ParkingSession.objects.filter(status='active').count()
+        sessions_active = ParkingSession.objects.filter(owner=request.user, status='active').count()
         sessions_completed_today = ParkingSession.objects.filter(
+            owner=request.user,
             status='completed',
             exit_time__isnull=False,
             exit_time__gte=today_start,
@@ -149,6 +163,7 @@ class DashboardView(APIView):
 
         revenue_today = (
             ParkingSession.objects.filter(
+                owner=request.user,
                 status='completed',
                 exit_time__isnull=False,
                 exit_time__gte=today_start,
@@ -157,9 +172,10 @@ class DashboardView(APIView):
             or 0
         )
 
-        recent_activity_24h = ParkingSession.objects.filter(entry_time__gte=last_24h).count()
+        recent_activity_24h = ParkingSession.objects.filter(owner=request.user, entry_time__gte=last_24h).count()
         vehicle_types = list(
-            Vehicle.objects.values('vehicle_type')
+            Vehicle.objects.filter(owner=request.user)
+            .values('vehicle_type')
             .annotate(count=Count('id'))
             .order_by('-count')
         )

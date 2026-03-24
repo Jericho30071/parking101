@@ -12,7 +12,8 @@ const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +41,12 @@ const Login = ({ onLogin }) => {
       } else if (!/[A-Za-z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
         newErrors.password = 'Password must contain at least 1 letter and 1 number';
       }
+
+      if (!formData.confirmPassword.trim()) {
+        newErrors.confirmPassword = 'Confirm Password is required';
+      } else if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
@@ -58,7 +65,7 @@ const Login = ({ onLogin }) => {
       try {
         const res =
           mode === 'signup'
-            ? await apiRegister(formData.username, formData.email, formData.password)
+            ? await apiRegister(formData.username, formData.email, formData.password, formData.confirmPassword)
             : await apiLogin(formData.username, formData.password)
         onLogin({
           user: {
@@ -68,7 +75,12 @@ const Login = ({ onLogin }) => {
           token: res.token,
         })
       } catch (error) {
-        setErrors({ login: error?.message || 'Login failed' })
+        const message = error?.message || 'Login failed'
+        if (mode === 'signup' && message.toLowerCase().includes('confirm_password')) {
+          setErrors({ confirmPassword: 'Passwords do not match' })
+        } else {
+          setErrors({ login: message })
+        }
       } finally {
         setIsLoading(false);
       }
@@ -158,6 +170,23 @@ const Login = ({ onLogin }) => {
             />
             {errors.password && <span className="field-error">{errors.password}</span>}
           </div>
+
+          {mode === 'signup' && (
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={errors.confirmPassword ? 'error' : ''}
+                placeholder="Confirm your password"
+                disabled={isLoading}
+              />
+              {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
+            </div>
+          )}
 
           <button type="submit" className="login-btn" disabled={isLoading}>
             {isLoading ? (

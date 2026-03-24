@@ -34,10 +34,22 @@ const apiFetch = async (path, options = {}) => {
   const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => '')
 
   if (!res.ok) {
-    const message =
-      (data && typeof data === 'object' && (data.detail || data.error)) ||
-      (typeof data === 'string' && data) ||
-      `Request failed (${res.status})`
+    let message = `Request failed (${res.status})`
+    if (data && typeof data === 'object') {
+      if (data.detail || data.error) {
+        message = data.detail || data.error
+      } else {
+        const firstKey = Object.keys(data)[0]
+        const firstValue = firstKey ? data[firstKey] : null
+        if (Array.isArray(firstValue) && firstValue.length > 0) {
+          message = `${firstKey}: ${firstValue[0]}`
+        } else if (typeof firstValue === 'string') {
+          message = `${firstKey}: ${firstValue}`
+        }
+      }
+    } else if (typeof data === 'string' && data) {
+      message = data
+    }
     throw new Error(message)
   }
 
@@ -51,10 +63,15 @@ export const login = async (username, password) => {
   })
 }
 
-export const register = async (username, email, password) => {
+export const register = async (username, email, password, confirmPassword) => {
   return apiFetch('/auth/register/', {
     method: 'POST',
-    body: JSON.stringify({ username, email, password }),
+    body: JSON.stringify({
+      username,
+      email,
+      password,
+      confirm_password: confirmPassword,
+    }),
   })
 }
 
