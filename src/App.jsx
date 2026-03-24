@@ -10,9 +10,11 @@ import ParkingManagement from './components/ParkingManagement'
 import SummaryStatus from './components/SummaryStatus'
 import SlotDetailModal from './components/SlotDetailModal'
 import Settings from './components/Settings'
+import UserProfile from './components/UserProfile'
 import Notification from './components/Notification'
 import { 
   logout as apiLogout,
+  fetchCurrentUser,
   fetchParkingSlots, 
   fetchActivityLogs, 
   simulateParkingUpdate,
@@ -24,7 +26,8 @@ import {
   updateVehicleAssignment,
   assignVehicleToSlot,
   releaseVehicleFromSlot,
-  updateParkingConfig
+  updateParkingConfig,
+  updateUserProfile
 } from './utils/api'
 import { formatCurrency } from './utils/api'
 import './App.css'
@@ -72,6 +75,33 @@ function App() {
     type: 'info'
   })
 
+  const getDisplayName = (account) => {
+    const fullName = [account?.first_name, account?.last_name].filter(Boolean).join(' ').trim()
+    return fullName || account?.username || 'Admin User'
+  }
+
+  const normalizeUser = (account) => {
+    if (!account) return null
+    return {
+      ...account,
+      name: getDisplayName(account),
+    }
+  }
+
+  const updateStoredAuthUser = (nextUser) => {
+    try {
+      const raw = localStorage.getItem('parkingAuth')
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      localStorage.setItem('parkingAuth', JSON.stringify({
+        ...parsed,
+        user: nextUser,
+      }))
+    } catch {
+      // no-op
+    }
+  }
+
   // Handle mobile responsiveness
   useEffect(() => {
     const handleResize = () => {
@@ -95,13 +125,31 @@ function App() {
       const { user, token, timestamp } = JSON.parse(authData)
       const sessionMs = (settings.sessionHours || 24) * 60 * 60 * 1000
       if (token && Date.now() - timestamp < sessionMs) {
-        setUser(user)
+        setUser(normalizeUser(user))
         setIsAuthenticated(true)
       } else {
         localStorage.removeItem('parkingAuth')
       }
     }
   }, [settings.sessionHours])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const syncCurrentUser = async () => {
+      try {
+        const currentUser = await fetchCurrentUser()
+        if (!currentUser) return
+        const normalized = normalizeUser(currentUser)
+        setUser(normalized)
+        updateStoredAuthUser(normalized)
+      } catch (error) {
+        console.error('Error syncing current user:', error)
+      }
+    }
+
+    syncCurrentUser()
+  }, [isAuthenticated])
 
   useEffect(() => {
     const applyConfig = async () => {
@@ -172,7 +220,7 @@ function App() {
   }, [isAuthenticated, settings.refreshIntervalSec])
 
   const handleLogin = (payload) => {
-    const nextUser = payload?.user || null
+    const nextUser = normalizeUser(payload?.user || null)
     const nextToken = payload?.token || ''
 
     setUser(nextUser)
@@ -185,6 +233,14 @@ function App() {
       token: nextToken,
       timestamp: Date.now()
     }))
+  }
+
+  const handleSaveProfile = async (profile) => {
+    const updated = await updateUserProfile(profile)
+    const normalized = normalizeUser(updated)
+    setUser(normalized)
+    updateStoredAuthUser(normalized)
+    return normalized
   }
 
   const handleLogout = async () => {
@@ -353,7 +409,7 @@ function App() {
     <Router>
       <div className="app">
         <Header 
-          adminName={user?.name || 'Admin User'} 
+          adminName={getDisplayName(user)} 
           onLogout={handleLogout}
         />
         
@@ -450,6 +506,12 @@ function App() {
                 <Settings settings={settings} onSave={handleSaveSettings} />
               </div>
             } />
+
+            <Route path="/profile" element={
+              <div className="dashboard-container">
+                <UserProfile user={user} onSave={handleSaveProfile} />
+              </div>
+            } />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -487,6 +549,13 @@ function App() {
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
               </svg>
               <span>Settings</span>
+            </NavLink>
+            <NavLink to="/profile" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>Profile</span>
             </NavLink>
           </div>
         </nav>

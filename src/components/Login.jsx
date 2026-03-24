@@ -2,16 +2,12 @@ import React, { useState } from 'react';
 
 import { login as apiLogin, register as apiRegister } from '../utils/api';
 
-function validateEmail(email) {
-  const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  return pattern.test(String(email || '').trim());
-}
-
 const Login = ({ onLogin }) => {
   const [mode, setMode] = useState('login');
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     username: '',
-    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -26,10 +22,12 @@ const Login = ({ onLogin }) => {
     }
 
     if (mode === 'signup') {
-      if (!formData.email.trim()) {
-        newErrors.email = 'Email is required';
-      } else if (!validateEmail(formData.email)) {
-        newErrors.email = 'Email is invalid';
+      if (!formData.firstName.trim()) {
+        newErrors.firstName = 'First name is required';
+      }
+
+      if (!formData.lastName.trim()) {
+        newErrors.lastName = 'Last name is required';
       }
     }
     
@@ -65,19 +63,30 @@ const Login = ({ onLogin }) => {
       try {
         const res =
           mode === 'signup'
-            ? await apiRegister(formData.username, formData.email, formData.password, formData.confirmPassword)
+            ? await apiRegister(formData.firstName, formData.lastName, formData.username, formData.password, formData.confirmPassword)
             : await apiLogin(formData.username, formData.password)
+
+        const fullName = [res?.user?.first_name, res?.user?.last_name].filter(Boolean).join(' ').trim()
         onLogin({
           user: {
             ...res.user,
-            name: res.user?.username || 'Admin User',
+            name: fullName || res.user?.username || 'Admin User',
           },
           token: res.token,
         })
       } catch (error) {
         const message = error?.message || 'Login failed'
-        if (mode === 'signup' && message.toLowerCase().includes('confirm_password')) {
-          setErrors({ confirmPassword: 'Passwords do not match' })
+        if (mode === 'signup') {
+          const lowered = message.toLowerCase()
+          if (lowered.includes('confirm_password')) {
+            setErrors({ confirmPassword: 'Passwords do not match' })
+          } else if (lowered.includes('first_name')) {
+            setErrors({ firstName: 'First name is required' })
+          } else if (lowered.includes('last_name')) {
+            setErrors({ lastName: 'Last name is required' })
+          } else {
+            setErrors({ login: message })
+          }
         } else {
           setErrors({ login: message })
         }
@@ -141,18 +150,35 @@ const Login = ({ onLogin }) => {
 
           {mode === 'signup' && (
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="firstName">First Name</label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
                 onChange={handleChange}
-                className={errors.email ? 'error' : ''}
-                placeholder="Enter your email"
+                className={errors.firstName ? 'error' : ''}
+                placeholder="Enter your first name"
                 disabled={isLoading}
               />
-              {errors.email && <span className="field-error">{errors.email}</span>}
+              {errors.firstName && <span className="field-error">{errors.firstName}</span>}
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <div className="form-group">
+              <label htmlFor="lastName">Last Name</label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                className={errors.lastName ? 'error' : ''}
+                placeholder="Enter your last name"
+                disabled={isLoading}
+              />
+              {errors.lastName && <span className="field-error">{errors.lastName}</span>}
             </div>
           )}
 

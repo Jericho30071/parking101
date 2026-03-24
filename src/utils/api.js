@@ -63,16 +63,35 @@ export const login = async (username, password) => {
   })
 }
 
-export const register = async (username, email, password, confirmPassword) => {
+export const register = async (firstName, lastName, username, password, confirmPassword) => {
   return apiFetch('/auth/register/', {
     method: 'POST',
     body: JSON.stringify({
+      first_name: firstName,
+      last_name: lastName,
       username,
-      email,
       password,
       confirm_password: confirmPassword,
     }),
   })
+}
+
+export const fetchCurrentUser = async () => {
+  const data = await apiFetch('/auth/me/')
+  return data?.user || null
+}
+
+export const updateUserProfile = async (profile) => {
+  const data = await apiFetch('/auth/me/', {
+    method: 'PATCH',
+    body: JSON.stringify({
+      first_name: profile?.firstName,
+      last_name: profile?.lastName,
+      username: profile?.username,
+      email: profile?.email ?? '',
+    }),
+  })
+  return data?.user || null
 }
 
 export const logout = async () => {

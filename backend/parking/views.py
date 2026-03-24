@@ -13,6 +13,7 @@ from .serializers import (
     ParkingSessionSerializer,
     ParkingSlotSerializer,
     RegisterSerializer,
+    UserProfileSerializer,
     UserSerializer,
     VehicleSerializer,
 )
@@ -65,6 +66,12 @@ class MeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        return Response({'user': UserSerializer(request.user).data})
+
+    def patch(self, request):
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response({'user': UserSerializer(request.user).data})
 
 
